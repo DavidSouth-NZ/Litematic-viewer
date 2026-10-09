@@ -1,0 +1,1218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Litematic Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Silkscreen&display=swap">
+<style>
+/* Layout: one-screen tool. Header strip, survey sidebar on the left, 3D viewport fills the rest; stacks viewport-over-sidebar on phones. */
+:root{
+  --bg:#eceee8; --panel:#f7f8f4; --line:#d3d7cc; --fg:#1d211c; --muted:#5b6457;
+  --accent:#b4532a; --accent-fg:#ffffff; --chip:#e2e6dc; --scene:#d9ddd2; --grid:#b4bbaa; --grid2:#c8cdbf; --hl:#1d211c;
+  --f-display:"Silkscreen", ui-monospace, monospace;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-data:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#111311; --panel:#181b18; --line:#2a2f29; --fg:#e3e7de; --muted:#8c9688;
+  --accent:#e48a58; --accent-fg:#1b0f08; --chip:#222622; --scene:#1b1f1b; --grid:#394037; --grid2:#272c26; --hl:#f4f6f0; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#111311; --panel:#181b18; --line:#2a2f29; --fg:#e3e7de; --muted:#8c9688;
+  --accent:#e48a58; --accent-fg:#1b0f08; --chip:#222622; --scene:#1b1f1b; --grid:#394037; --grid2:#272c26; --hl:#f4f6f0; color-scheme:dark }
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+*{box-sizing:border-box}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.app{display:grid;height:100%;grid-template-columns:minmax(280px,340px) 1fr;grid-template-rows:auto minmax(0,1fr);grid-template-areas:"top top" "side view"}
+.top{grid-area:top;display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-size:15px;letter-spacing:.02em;white-space:nowrap}
+.mark{width:18px;height:18px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px}
+.mark i{background:var(--accent)} .mark i:nth-child(2),.mark i:nth-child(3){background:var(--muted)}
+.file{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.file b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{font-family:var(--f-data);font-size:11px;padding:2px 7px;border-radius:3px;background:var(--chip);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:4px;background:var(--panel);cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.07)}
+
+.side{grid-area:side;overflow:auto;min-height:0;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column}
+.sec{padding:16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.sec h2{margin:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sec h2 span{font-family:var(--f-data);font-weight:400;letter-spacing:0;text-transform:none}
+.desc{margin:0;color:var(--muted);font-size:13px}
+dl.facts{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 14px}
+dl.facts dt{color:var(--muted);font-size:13px}
+dl.facts dd{margin:0;font-family:var(--f-data);font-size:12.5px;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}
+
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg label{position:relative;text-align:center;padding:6px 4px;cursor:pointer;font-size:13px;border-left:1px solid var(--line)}
+.seg label:first-child{border-left:0}
+.seg input{position:absolute;opacity:0;inset:0;cursor:pointer;margin:0}
+.seg label:has(input:checked){background:var(--fg);color:var(--bg)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+.layer-row{display:flex;align-items:center;gap:8px}
+.layer-row input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.step{width:30px;height:30px;padding:0;justify-content:center;font-family:var(--f-data)}
+.layer-read{font-family:var(--f-data);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.layer-read b{color:var(--fg);font-weight:500}
+.kbd{font-family:var(--f-data);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px}
+
+.mats{flex:1;min-height:200px}
+.search{width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg)}
+.matlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.mrow{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:4px 10px;align-items:center;width:100%;padding:6px 6px;border:0;background:none;text-align:left;cursor:pointer;border-radius:3px}
+.mrow:hover{background:var(--chip)}
+.sw{width:14px;height:14px;border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+.mname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcount{font-family:var(--f-data);font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right}
+.mstack{grid-column:2 / 4;font-family:var(--f-data);font-size:11px;color:var(--muted);margin-top:-3px}
+.mrow.off .mname,.mrow.off .mcount{text-decoration:line-through;color:var(--muted)}
+.mrow.off .sw{opacity:.25}
+.mhint{font-size:12px;color:var(--muted);margin:0;display:flex;justify-content:space-between;gap:8px}
+.link{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font-size:12px;text-decoration:underline}
+
+.view{grid-area:view;position:relative;min-height:0;overflow:hidden;background:var(--scene)}
+#c{display:block;width:100%;height:100%;touch-action:none}
+.hud{position:absolute;display:flex;gap:6px}
+.hud.tl{top:12px;left:12px;flex-wrap:wrap}
+.hud .btn{padding:5px 10px;font-size:12.5px;background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(6px)}
+.hud .btn[aria-pressed="true"]{border-color:var(--fg)}
+.readout{position:absolute;left:12px;bottom:12px;right:12px;pointer-events:none;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.readout .cell{font-family:var(--f-data);font-size:12px;background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:4px;padding:6px 9px;max-width:min(560px,70%);overflow-wrap:anywhere}
+.readout .cell b{font-weight:500}
+.readout .cell .dim{color:var(--muted)}
+.hint{font-size:12px;color:var(--muted);text-align:right}
+.compass{position:absolute;top:12px;right:12px;width:54px;height:54px;border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 88%,transparent);pointer-events:none}
+.compass .rose{position:absolute;inset:0;transition:none}
+.compass span{position:absolute;font-family:var(--f-data);font-size:10px;width:14px;text-align:center;left:50%;top:50%;margin:-7px 0 0 -7px;line-height:14px;color:var(--muted)}
+.compass span.n{color:var(--accent);font-weight:500}
+.progress{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-family:var(--f-data);font-size:12px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:5px 10px}
+.drop{position:absolute;inset:10px;border:2px dashed var(--accent);border-radius:8px;display:grid;place-items:center;background:color-mix(in srgb,var(--scene) 80%,transparent);font-family:var(--f-display);font-size:16px;color:var(--accent);pointer-events:none}
+.cut{display:grid;grid-template-columns:14px minmax(0,1fr) minmax(0,1fr) 54px;gap:8px;align-items:center}
+.cut input{width:100%;min-width:0;accent-color:var(--accent)}
+.ax{font-family:var(--f-data);font-size:12px;color:var(--muted)}
+.cv{font-family:var(--f-data);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.pad{position:absolute;right:12px;bottom:72px;display:grid;gap:6px;grid-template-columns:repeat(4,44px);grid-template-rows:repeat(2,44px);grid-template-areas:". f . up" "l b r dn"}
+.pad .btn{justify-content:center;padding:0;font-family:var(--f-data);background:color-mix(in srgb,var(--panel) 88%,transparent);touch-action:none;user-select:none;-webkit-user-select:none}
+.pad .btn.on{background:var(--fg);color:var(--bg)}
+.view.flying #c{cursor:grab}
+.view.flying #c:active{cursor:grabbing}
+.err{margin:0;padding:10px 12px;border:1px solid var(--accent);border-radius:4px;font-size:13px;color:var(--fg);background:color-mix(in srgb,var(--accent) 10%,var(--panel))}
+
+@media (max-width:760px){
+  html,body{height:auto}
+  .app{height:auto;grid-template-columns:1fr;grid-template-rows:auto 62vh auto;grid-template-areas:"top" "view" "side"}
+  .side{border-right:0;overflow:visible}
+  .hint{display:none}
+  .readout .cell{max-width:100%}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Litematic Viewer</div>
+    <div class="file"><b id="fileName">Hillside Cottage</b><span class="tag" id="fileTag">Example build</span></div>
+    <label class="btn primary" for="fileInput">Open schematic…</label>
+    <input class="sr" type="file" id="fileInput" accept=".litematic,.schem,.schematic,.nbt">
+  </header>
+
+  <aside class="side">
+    <section class="sec" id="infoSec">
+      <h2>Schematic</h2>
+      <p class="desc" id="desc"></p>
+      <dl class="facts" id="facts"></dl>
+      <p class="err" id="err" hidden></p>
+    </section>
+
+    <section class="sec">
+      <h2>Layers <span id="layerTotal"></span></h2>
+      <div class="seg" role="radiogroup" aria-label="Layer mode">
+        <label><input type="radio" name="mode" id="mode-all" value="all" checked>All</label>
+        <label><input type="radio" name="mode" id="mode-upto" value="upto">Up to</label>
+        <label><input type="radio" name="mode" id="mode-single" value="single">Single</label>
+      </div>
+      <div class="layer-row">
+        <button class="btn step" id="layDown" aria-label="Layer down">−</button>
+        <input type="range" id="layer" min="0" max="0" value="0" aria-label="Layer">
+        <button class="btn step" id="layUp" aria-label="Layer up">+</button>
+      </div>
+      <div class="layer-read" id="layerRead"></div>
+    </section>
+
+    <section class="sec">
+      <h2>Cutaway <button class="link" id="cutReset" hidden>Reset</button></h2>
+      <div class="cut"><span class="ax">X</span><input type="range" id="cx0" aria-label="X from"><input type="range" id="cx1" aria-label="X to"><span class="cv" id="cxv"></span></div>
+      <div class="cut"><span class="ax">Z</span><input type="range" id="cz0" aria-label="Z from"><input type="range" id="cz1" aria-label="Z to"><span class="cv" id="czv"></span></div>
+      <p class="desc">Trim walls off the sides to look into rooms. Combine with layers to open a section box.</p>
+    </section>
+
+    <section class="sec mats">
+      <h2>Material list <span id="matTotal"></span></h2>
+      <input class="search" id="matSearch" type="search" placeholder="Filter blocks" aria-label="Filter blocks">
+      <p class="mhint"><span>Click a block to hide it in the view.</span><button class="link" id="showAll" hidden>Show all</button></p>
+      <ul class="matlist" id="matList"></ul>
+    </section>
+  </aside>
+
+  <main class="view" id="view">
+    <canvas id="c"></canvas>
+    <div class="hud tl">
+      <button class="btn" id="tFly" aria-pressed="false" title="Fly through the build (F)">Fly mode</button>
+      <button class="btn" id="resetView">Reset view</button>
+      <button class="btn" id="tGrid" aria-pressed="true">Grid</button>
+      <button class="btn" id="tBox" aria-pressed="true">Bounds</button>
+    </div>
+    <div class="compass" aria-hidden="true"><div class="rose" id="rose">
+      <span class="n" style="transform:translateY(-19px)">N</span>
+      <span style="transform:translateX(19px)">E</span>
+      <span style="transform:translateY(19px)">S</span>
+      <span style="transform:translateX(-19px)">W</span>
+    </div></div>
+    <div class="progress" id="progress" hidden></div>
+    <div class="readout">
+      <div class="cell" id="hover"><span class="dim">Point at a block to inspect it</span></div>
+      <div class="hint" id="hintOrbit">Drag to orbit · right-drag to pan · scroll to zoom<br>Double-click a block to zoom in on it · <span class="kbd">F</span> fly · <span class="kbd">[</span> <span class="kbd">]</span> layers</div>
+      <div class="hint" id="hintFly" hidden>Drag to look · <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> move · <span class="kbd">Space</span> up · <span class="kbd">Shift</span> down<br>Scroll to change speed · <span class="kbd">F</span> or <span class="kbd">Esc</span> to leave · <span id="flySpeed">8</span> blocks/s</div>
+    </div>
+    <div class="pad" id="flyPad" hidden>
+      <button class="btn" data-k="Space" style="grid-area:up" aria-label="Fly up">▲</button>
+      <button class="btn" data-k="ShiftLeft" style="grid-area:dn" aria-label="Fly down">▼</button>
+      <button class="btn" data-k="KeyW" style="grid-area:f" aria-label="Forward">W</button>
+      <button class="btn" data-k="KeyA" style="grid-area:l" aria-label="Left">A</button>
+      <button class="btn" data-k="KeyS" style="grid-area:b" aria-label="Back">S</button>
+      <button class="btn" data-k="KeyD" style="grid-area:r" aria-label="Right">D</button>
+    </div>
+    <div class="drop" id="drop" hidden>Drop .litematic, .schem or .nbt</div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+
+/* ---------------- NBT ---------------- */
+async function inflate(u8){
+  let fmt = null;
+  if (u8[0] === 0x1f && u8[1] === 0x8b) fmt = 'gzip';
+  else if (u8[0] === 0x78) fmt = 'deflate';
+  if (!fmt) return u8;
+  const ds = new DecompressionStream(fmt);
+  const buf = await new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer();
+  return new Uint8Array(buf);
+}
+function parseNBT(u8){
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  const td = new TextDecoder();
+  let p = 0;
+  const str = () => { const n = dv.getUint16(p); p += 2; const s = td.decode(u8.subarray(p, p + n)); p += n; return s; };
+  function pl(t){
+    switch (t){
+      case 1: return dv.getInt8(p++);
+      case 2: { const v = dv.getInt16(p); p += 2; return v; }
+      case 3: { const v = dv.getInt32(p); p += 4; return v; }
+      case 4: { const v = dv.getInt32(p) * 4294967296 + dv.getUint32(p + 4); p += 8; return v; }
+      case 5: { const v = dv.getFloat32(p); p += 4; return v; }
+      case 6: { const v = dv.getFloat64(p); p += 8; return v; }
+      case 7: { const n = dv.getInt32(p); p += 4; const a = u8.slice(p, p + n); p += n; return a; }
+      case 8: return str();
+      case 9: { const et = dv.getUint8(p++); const n = dv.getInt32(p); p += 4; const a = []; for (let i = 0; i < n; i++) a.push(pl(et)); return a; }
+      case 10: { const o = {}; for (;;){ const tt = dv.getUint8(p++); if (tt === 0) break; const k = str(); o[k] = pl(tt); } return o; }
+      case 11: { const n = dv.getInt32(p); p += 4; const a = new Int32Array(n); for (let i = 0; i < n; i++){ a[i] = dv.getInt32(p); p += 4; } return a; }
+      case 12: { const n = dv.getInt32(p); p += 4; const w = new Uint32Array(n * 2);
+        for (let i = 0; i < n; i++){ w[2*i+1] = dv.getUint32(p); w[2*i] = dv.getUint32(p + 4); p += 8; } return { longs: n, words: w }; }
+      default: throw new Error('This file has an unknown NBT tag (' + t + ') at byte ' + p + '. It may be corrupted.');
+    }
+  }
+  const t = dv.getUint8(p++);
+  if (t !== 10) throw new Error('This file is not an NBT schematic.');
+  str();
+  return pl(10);
+}
+function parseState(s){
+  const m = s.match(/^([^\[]+)(?:\[(.*)\])?$/);
+  const name = m[1].includes(':') ? m[1] : 'minecraft:' + m[1];
+  const props = {};
+  if (m[2]) for (const kv of m[2].split(',')){ const [k, v] = kv.split('='); if (k) props[k.trim()] = (v || '').trim(); }
+  return { name, props };
+}
+const stateKey = (name, props) => { const ks = Object.keys(props || {}).sort(); return ks.length ? name + '[' + ks.map(k => k + '=' + props[k]).join(',') + ']' : name; };
+
+/* ---------------- Formats -> model ---------------- */
+function newModel(W, H, L){
+  const palette = [{ name: 'minecraft:air', props: {} }];
+  const keys = new Map([['minecraft:air', 0]]);
+  const add = (name, props) => {
+    if (!name.includes(':')) name = 'minecraft:' + name;
+    const k = stateKey(name, props);
+    let i = keys.get(k);
+    if (i === undefined){ i = palette.length; palette.push({ name, props: props || {} }); keys.set(k, i); }
+    return i;
+  };
+  return { W, H, L, palette, add, blocks: new Uint16Array(W * H * L), regions: [], meta: {} };
+}
+function fromLitematic(root){
+  const regs = Object.entries(root.Regions || {});
+  if (!regs.length) throw new Error('This litematic has no regions.');
+  let mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+  const R = regs.map(([name, r]) => {
+    const pos = [r.Position.x, r.Position.y, r.Position.z], sz = [r.Size.x, r.Size.y, r.Size.z];
+    const o = pos.map((v, i) => v + (sz[i] < 0 ? sz[i] + 1 : 0)), a = sz.map(Math.abs);
+    for (let i = 0; i < 3; i++){ mn[i] = Math.min(mn[i], o[i]); mx[i] = Math.max(mx[i], o[i] + a[i] - 1); }
+    return { name, r, o, a };
+  });
+  const W = mx[0]-mn[0]+1, H = mx[1]-mn[1]+1, L = mx[2]-mn[2]+1;
+  if (W * H * L > 64e6) throw new Error(`This schematic is ${W}×${H}×${L} blocks, which is too large to show in the browser.`);
+  const M = newModel(W, H, L);
+  for (const { name, r, o, a } of R){
+    const pal = r.BlockStatePalette || [];
+    const map = pal.map(e => M.add(e.Name, e.Properties || {}));
+    const words = r.BlockStates ? r.BlockStates.words : new Uint32Array(0);
+    const n = pal.length;
+    const bits = Math.max(2, n > 1 ? (n - 1).toString(2).length : 0);
+    const mask = (1 << bits) - 1;
+    const [sx, sy, sz] = a, ox = o[0]-mn[0], oy = o[1]-mn[1], oz = o[2]-mn[2];
+    let bp = 0;
+    for (let y = 0; y < sy; y++) for (let z = 0; z < sz; z++){
+      const rowBase = ((y + oy) * L + (z + oz)) * W + ox;
+      for (let x = 0; x < sx; x++, bp += bits){
+        const w = bp >>> 5, of = bp & 31;
+        let v = words[w] >>> of;
+        if (of + bits > 32) v |= words[w + 1] << (32 - of);
+        v &= mask;
+        const g = map[v];
+        if (g) M.blocks[rowBase + x] = g;
+      }
+    }
+    M.regions.push({ name, size: a });
+  }
+  const md = root.Metadata || {};
+  M.meta = { name: md.Name, author: md.Author, description: md.Description, created: md.TimeCreated,
+    dataVersion: root.MinecraftDataVersion, format: 'Litematica v' + (root.Version ?? '?') };
+  return M;
+}
+function fromSponge(root){
+  const s = root.Schematic || root;
+  const W = s.Width, H = s.Height, L = s.Length;
+  const palObj = s.Blocks ? s.Blocks.Palette : s.Palette;
+  const data = s.Blocks ? s.Blocks.Data : s.BlockData;
+  if (!palObj || !data) throw new Error('This .schem file has no block data. Legacy MCEdit .schematic files are not supported.');
+  const M = newModel(W, H, L);
+  const map = [];
+  for (const [k, id] of Object.entries(palObj)){ const st = parseState(k); map[id] = M.add(st.name, st.props); }
+  let i = 0, p = 0; const N = W * H * L;
+  while (p < data.length && i < N){
+    let v = 0, sh = 0, b;
+    do { b = data[p++] & 0xff; v |= (b & 0x7f) << sh; sh += 7; } while (b & 0x80);
+    const g = map[v]; if (g) M.blocks[i] = g; i++;
+  }
+  const md = s.Metadata || {};
+  M.regions.push({ name: 'Schematic', size: [W, H, L] });
+  M.meta = { name: md.Name, author: md.Author, created: md.Date, dataVersion: s.DataVersion, format: 'Sponge v' + (s.Version ?? '?') };
+  return M;
+}
+function fromStructure(root){
+  const [W, H, L] = root.size;
+  const pal = root.palette || (root.palettes && root.palettes[0]) || [];
+  const M = newModel(W, H, L);
+  const map = pal.map(e => M.add(e.Name, e.Properties || {}));
+  for (const b of root.blocks || []){
+    const [x, y, z] = b.pos; const g = map[b.state];
+    if (g) M.blocks[(y * L + z) * W + x] = g;
+  }
+  M.regions.push({ name: 'Structure', size: [W, H, L] });
+  M.meta = { author: root.author, dataVersion: root.DataVersion, format: 'Structure block' };
+  return M;
+}
+async function loadFile(file){
+  const raw = new Uint8Array(await file.arrayBuffer());
+  const root = parseNBT(await inflate(raw));
+  let M;
+  if (root.Regions) M = fromLitematic(root);
+  else if (root.Schematic || root.BlockData || root.Blocks && root.Width) M = fromSponge(root);
+  else if (root.size && root.blocks) M = fromStructure(root);
+  else if (root.Blocks && root.Materials) throw new Error('Legacy MCEdit .schematic files (pre-1.13) are not supported. Re-save it as .litematic or .schem.');
+  else throw new Error('This file is NBT, but not a schematic format this viewer recognises.');
+  M.meta.name = M.meta.name || file.name.replace(/\.[^.]+$/, '');
+  M.meta.file = file.name;
+  return M;
+}
+
+/* ---------------- Example build ---------------- */
+function makeSample(){
+  const W = 17, H = 13, L = 17;
+  const g = new Array(W * H * L).fill(null);
+  const inb = (x, y, z) => x >= 0 && y >= 0 && z >= 0 && x < W && y < H && z < L;
+  const I = (x, y, z) => (y * L + z) * W + x;
+  const set = (x, y, z, s) => { if (inb(x, y, z)) g[I(x, y, z)] = s; };
+  const fill = (x, y, z, s) => { if (inb(x, y, z) && !g[I(x, y, z)]) g[I(x, y, z)] = s; };
+  const get = (x, y, z) => inb(x, y, z) ? g[I(x, y, z)] : null;
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+  for (let x = 0; x < W; x++) for (let z = 0; z < L; z++) set(x, 0, z, 'grass_block[snowy=false]');
+  for (let x = 2; x <= 4; x++) for (let z = 12; z <= 14; z++) set(x, 0, z, 'water[level=0]');
+  set(3, 1, 13, 'lily_pad');
+  for (let z = 12; z < L; z++) set(8, 0, z, 'dirt_path');
+  for (let x = 3; x <= 13; x++) for (let z = 3; z <= 10; z++)
+    set(x, 1, z, (x === 3 || x === 13 || z === 3 || z === 10) ? 'cobblestone' : 'spruce_planks');
+  for (let y = 2; y <= 5; y++){
+    for (let x = 3; x <= 13; x++){ set(x, y, 3, 'oak_planks'); set(x, y, 10, 'oak_planks'); }
+    for (let z = 3; z <= 10; z++){ set(3, y, z, 'oak_planks'); set(13, y, z, 'oak_planks'); }
+    for (const [x, z] of [[3,3],[13,3],[3,10],[13,10],[8,3]]) set(x, y, z, 'spruce_log[axis=y]');
+  }
+  for (const y of [3, 4]){
+    for (const x of [5, 6, 10, 11]){ set(x, y, 3, 'glass_pane'); set(x, y, 10, 'glass_pane'); }
+    for (const z of [6, 7]){ set(3, y, z, 'glass_pane'); set(13, y, z, 'glass_pane'); }
+  }
+  set(8, 2, 10, 'oak_door[facing=south,half=lower,hinge=left,open=false,powered=false]');
+  set(8, 3, 10, 'oak_door[facing=south,half=upper,hinge=left,open=false,powered=false]');
+  set(8, 1, 11, 'cobblestone_stairs[facing=north,half=bottom,shape=straight]');
+  set(7, 4, 11, 'wall_torch[facing=south]'); set(9, 4, 11, 'wall_torch[facing=south]');
+  for (let x = 3; x <= 13; x++){ set(x, 6, 3, 'spruce_log[axis=x]'); set(x, 6, 10, 'spruce_log[axis=x]'); }
+  for (let z = 4; z <= 9; z++){ set(3, 6, z, 'spruce_log[axis=z]'); set(13, 6, z, 'spruce_log[axis=z]'); }
+  for (let i = 1; i <= 4; i++) for (let z = 3 + i; z <= 10 - i; z++){ set(3, 6 + i, z, 'oak_planks'); set(13, 6 + i, z, 'oak_planks'); }
+  for (let i = 0; i <= 4; i++) for (let x = 2; x <= 14; x++){
+    set(x, 6 + i, 2 + i, 'deepslate_tile_stairs[facing=south,half=bottom,shape=straight]');
+    set(x, 6 + i, 11 - i, 'deepslate_tile_stairs[facing=north,half=bottom,shape=straight]');
+  }
+  for (let y = 2; y <= 11; y++) set(11, y, 8, 'bricks');
+  set(11, 12, 8, 'campfire[lit=true,facing=north]');
+  set(4, 2, 4, 'crafting_table'); set(5, 2, 4, 'furnace[facing=south,lit=false]'); set(6, 2, 4, 'chest[facing=south,type=single]');
+  set(5, 3, 4, 'lantern[hanging=false]');
+  for (const y of [2, 3]) for (const z of [8, 9]) set(4, y, z, 'bookshelf');
+  set(12, 2, 4, 'red_bed[part=head,facing=north,occupied=false]'); set(12, 2, 5, 'red_bed[part=foot,facing=north,occupied=false]');
+  set(9, 2, 8, 'potted_red_tulip');
+  for (let i = 1; i <= 15; i++){
+    set(i, 1, 1, 'oak_fence'); set(1, 1, i, 'oak_fence'); set(15, 1, i, 'oak_fence');
+    if (i !== 8) set(i, 1, 15, 'oak_fence');
+  }
+  for (let y = 1; y <= 5; y++) set(13, y, 13, 'oak_log[axis=y]');
+  const leaf = 'oak_leaves[distance=1,persistent=true]';
+  for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++){
+    if (Math.abs(dx) + Math.abs(dz) < 4 || rnd() < 0.4){ fill(13+dx, 4, 13+dz, leaf); fill(13+dx, 5, 13+dz, leaf); }
+    if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1) fill(13+dx, 6, 13+dz, leaf);
+  }
+  fill(13, 7, 13, leaf); fill(12, 7, 13, leaf); fill(14, 7, 13, leaf); fill(13, 7, 12, leaf); fill(13, 7, 14, leaf);
+  const flowers = ['poppy', 'dandelion', 'cornflower', 'allium', 'oxeye_daisy', 'azure_bluet'];
+  for (let x = 2; x <= 14; x++) for (let z = 2; z <= 14; z++){
+    if (get(x, 0, z) !== 'grass_block[snowy=false]' || get(x, 1, z)) continue;
+    if (x >= 3 && x <= 13 && z >= 2 && z <= 11) continue;
+    const r = rnd();
+    if (r < 0.10) set(x, 1, z, flowers[Math.floor(rnd() * flowers.length)]);
+    else if (r < 0.26) set(x, 1, z, 'short_grass');
+  }
+  // connect fences and panes
+  const dirs = { north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0] };
+  for (let y = 0; y < H; y++) for (let z = 0; z < L; z++) for (let x = 0; x < W; x++){
+    const s = get(x, y, z); if (s !== 'oak_fence' && s !== 'glass_pane') continue;
+    const pr = [];
+    for (const [d, [dx, dz]] of Object.entries(dirs)){
+      const n = get(x + dx, y, z + dz) || '';
+      const ok = s === 'oak_fence' ? n.startsWith('oak_fence') : /pane|planks|log/.test(n);
+      pr.push(d + '=' + ok);
+    }
+    set(x, y, z, s + '[' + pr.join(',') + ']');
+  }
+  const M = newModel(W, H, L);
+  for (let i = 0; i < g.length; i++) if (g[i]){ const st = parseState(g[i]); M.blocks[i] = M.add(st.name, st.props); }
+  M.regions.push({ name: 'Cottage', size: [W, H, L] });
+  M.meta = { name: 'Hillside Cottage', author: 'Example build', description: 'A small sample so the viewer has something to show. Open your own .litematic to replace it.', dataVersion: 3953, format: 'Built-in example' };
+  return M;
+}
+
+/* ---------------- Block look: colors ---------------- */
+const hexc = h => [(h >> 16 & 255) / 255, (h >> 8 & 255) / 255, (h & 255) / 255];
+const mixh = (a, b, t) => { const A = hexc(a), B = hexc(b); return A.map((v, i) => v + (B[i] - v) * t); };
+const WOOL = {white:0xe9ecec,orange:0xf07613,magenta:0xbd44b3,light_blue:0x3aafd9,yellow:0xf8c527,lime:0x70b919,pink:0xed8dac,gray:0x3e4447,light_gray:0x8e8e86,cyan:0x158991,purple:0x792aac,blue:0x35399d,brown:0x724728,green:0x546d1b,red:0xa12722,black:0x141519};
+const CONC = {white:0xcfd5d6,orange:0xe06101,magenta:0xa9309f,light_blue:0x2389c7,yellow:0xf1af15,lime:0x5ea918,pink:0xd5658f,gray:0x373a3e,light_gray:0x7d7d73,cyan:0x157788,purple:0x64209c,blue:0x2c2e8f,brown:0x603c20,green:0x495b24,red:0x8e2121,black:0x080a0f};
+const TERR = {white:0xd2b2a1,orange:0xa25426,magenta:0x96586d,light_blue:0x716d8a,yellow:0xba8523,lime:0x677535,pink:0xa24e4f,gray:0x3a2a24,light_gray:0x876b62,cyan:0x575b5b,purple:0x764656,blue:0x4a3c5b,brown:0x4d3324,green:0x4c532a,red:0x8f3d2e,black:0x251710};
+const DYES = ['light_blue','light_gray','white','orange','magenta','yellow','lime','pink','gray','cyan','purple','blue','brown','green','red','black'];
+const DYED = /^(wool|carpet|concrete|concrete_powder|terracotta|glazed_terracotta|stained_glass|stained_glass_pane|bed|banner|wall_banner|candle|candle_cake|shulker_box|tulip|mushroom)$/;
+const PLANK = {oak:0xa2834f,spruce:0x735531,birch:0xc0af79,jungle:0xa07351,acacia:0xa85a32,dark_oak:0x42290f,mangrove:0x763631,cherry:0xe2b2ac,bamboo:0xc4af52,crimson:0x653044,warped:0x2b6963,pale_oak:0xe3d9d4};
+const BARK = {oak:0x6d5532,spruce:0x3b2611,birch:0xd7d3cb,jungle:0x56441a,acacia:0x676157,dark_oak:0x3d2f1a,mangrove:0x544228,cherry:0x371c25,crimson:0x5b1a2c,warped:0x3a3a4e,pale_oak:0x5a5048,bamboo:0x7f9a2f};
+const LEAF = {oak:0x4f8a2a,spruce:0x3c5d3c,birch:0x6a8f3f,jungle:0x3f8a1f,acacia:0x4d7f22,dark_oak:0x3e6e1d,mangrove:0x4b7c1f,cherry:0xe6add8,pale_oak:0x8a9283,azalea:0x5b7329,flowering_azalea:0x6e7a4a};
+const WOODS = Object.keys(PLANK).sort((a, b) => b.length - a.length);
+const T = {
+  stone:0x7d7d7d,cobblestone:0x7a7a7a,mossy_cobblestone:0x6e7a5f,stone_bricks:0x7a7a7a,mossy_stone_bricks:0x737a63,cracked_stone_bricks:0x767676,chiseled_stone_bricks:0x777777,smooth_stone:0x9e9e9e,
+  granite:0x956755,polished_granite:0x9a6a59,diorite:0xbcbcbc,polished_diorite:0xc0c0c1,andesite:0x888888,polished_andesite:0x848685,
+  deepslate:0x505053,cobbled_deepslate:0x4d4d50,polished_deepslate:0x484849,deepslate_bricks:0x464646,deepslate_tiles:0x363637,chiseled_deepslate:0x363636,reinforced_deepslate:0x4f5450,
+  calcite:0xdfe0dc,tuff:0x6c6d66,dripstone_block:0x866b5c,pointed_dripstone:0x816556,dirt:0x866043,coarse_dirt:0x77553b,rooted_dirt:0x90684d,mud:0x3c3a3d,packed_mud:0x8e6b50,mud_bricks:0x89684f,
+  sand:0xdbcfa3,red_sand:0xbe6621,sandstone:0xd8cb9b,red_sandstone:0xba631d,gravel:0x837f7e,clay:0xa0a6b3,suspicious_sand:0xd5c79b,suspicious_gravel:0x7f7b7a,
+  snow_block:0xf3f8f8,snow:0xf3f8f8,powder_snow:0xf3f8f8,ice:0x91b7fd,packed_ice:0x8db4fa,blue_ice:0x74a8fd,frosted_ice:0x8db4fa,
+  obsidian:0x0f0b19,crying_obsidian:0x200a3c,bedrock:0x555555,netherrack:0x622626,nether_bricks:0x2c1519,red_nether_bricks:0x450709,cracked_nether_bricks:0x281417,chiseled_nether_bricks:0x2f171b,
+  soul_sand:0x513e32,soul_soil:0x4b3a2e,basalt:0x505055,polished_basalt:0x636364,smooth_basalt:0x48484e,blackstone:0x2a2429,polished_blackstone:0x353038,polished_blackstone_bricks:0x302a31,gilded_blackstone:0x372a26,
+  glowstone:0xab8654,shroomlight:0xf09246,magma_block:0x8e3f1f,crimson_nylium:0x831f1f,warped_nylium:0x2b7265,nether_wart_block:0x732a29,warped_wart_block:0x167879,nether_wart:0x8a1d22,
+  end_stone:0xdbde9e,end_stone_bricks:0xdae0a2,purpur_block:0xa97ea9,purpur_pillar:0xab81aa,prismarine:0x63a197,prismarine_bricks:0x63ac9e,dark_prismarine:0x335b4b,sea_lantern:0xacc7be,
+  quartz_block:0xece6df,smooth_quartz:0xece6df,quartz_bricks:0xeae4dc,quartz_pillar:0xebe6e0,chiseled_quartz_block:0xe7e2da,quartz:0xece6df,
+  bricks:0x976253,brick:0x976253,terracotta:0x985e43,iron_block:0xdcdcdc,gold_block:0xf6d03d,diamond_block:0x62ede4,emerald_block:0x2acb57,lapis_block:0x1f438c,redstone_block:0xaf1805,coal_block:0x101010,
+  netherite_block:0x433d40,ancient_debris:0x5f4a43,amethyst_block:0x8662bf,budding_amethyst:0x8461bf,raw_iron_block:0xa6876b,raw_gold_block:0xdda92e,raw_copper_block:0x9a6a4f,
+  hay_block:0xa68b0c,bookshelf:0x75603d,chiseled_bookshelf:0x6e5a3b,crafting_table:0x77583a,furnace:0x6e6e6e,blast_furnace:0x6c6b6b,smoker:0x6b5c47,
+  chest:0xa2782f,trapped_chest:0xa2782f,ender_chest:0x253a3b,barrel:0x8c6a3c,tnt:0xdb4426,pumpkin:0xc67519,carved_pumpkin:0xc67519,jack_o_lantern:0xd6922c,melon:0x6f912c,
+  cactus:0x5a8a2b,sponge:0xc4c04a,wet_sponge:0xaba847,note_block:0x5f3f2d,jukebox:0x5e402f,target:0xe2aaa0,honeycomb_block:0xe5941e,honey_block:0xfbb932,slime_block:0x6fc05b,
+  bone_block:0xe1ddc9,dried_kelp_block:0x313b23,moss_block:0x596e2d,moss_carpet:0x596e2d,pale_moss_block:0x6b7069,pale_moss_carpet:0x6b7069,mushroom_stem:0xcbc5ba,brown_mushroom_block:0x956f51,red_mushroom_block:0xc82e2d,
+  glass:0xc8e4ea,tinted_glass:0x2c2730,glass_pane:0xc8e4ea,iron_bars:0x8a8c8b,chain:0x3b404a,iron_chain:0x3b404a,water:0x3f76e4,bubble_column:0x3f76e4,lava:0xd4600f,
+  short_grass:0x5f9a3a,grass:0x5f9a3a,tall_grass:0x5f9a3a,fern:0x588f37,large_fern:0x588f37,seagrass:0x3d7f2f,tall_seagrass:0x3d7f2f,kelp:0x568d2d,kelp_plant:0x568d2d,
+  sugar_cane:0x8bb35b,vine:0x4d7e25,glow_lichen:0x70837a,lily_pad:0x2c7a24,dead_bush:0x6b4f29,sweet_berry_bush:0x355f2e,bamboo:0x5c8c27,
+  poppy:0xc01b1b,dandelion:0xe0d21e,cornflower:0x4669c9,allium:0xb47ad9,azure_bluet:0xd8e1e8,oxeye_daisy:0xe4e4d0,lily_of_the_valley:0xe8ecdc,blue_orchid:0x29a6d6,wither_rose:0x23271a,
+  sunflower:0xe9c228,lilac:0xb48bb8,rose_bush:0xa3302a,peony:0xd3a3d6,torchflower:0xe0892c,pink_petals:0xf2b5d2,spore_blossom:0xd56fa6,
+  torch:0xf2c94a,wall_torch:0xf2c94a,soul_torch:0x6fd3d6,soul_wall_torch:0x6fd3d6,redstone_torch:0xd02a14,redstone_wall_torch:0xd02a14,lantern:0x6b5b47,soul_lantern:0x4a6b70,
+  redstone_wire:0xa0130a,repeater:0xa2a2a2,comparator:0xa5a2a2,daylight_detector:0x82745e,observer:0x626262,piston:0x8c7f69,sticky_piston:0x8c7f69,dispenser:0x6e6e6e,dropper:0x6e6e6e,hopper:0x4a4a4c,
+  lever:0x76695a,rail:0x7d7058,powered_rail:0x9a7b3f,detector_rail:0x7a6a5f,activator_rail:0x7a5d58,redstone_lamp:0x8e5b33,
+  flower_pot:0x7c4535,cauldron:0x4a494a,anvil:0x444444,chipped_anvil:0x444444,damaged_anvil:0x444444,enchanting_table:0x8a2a2a,lectern:0xad8a52,cartography_table:0x684f39,fletching_table:0xc5b484,smithing_table:0x3a3b48,loom:0x8e7863,stonecutter:0x7b7672,grindstone:0x8f8f8f,
+  brewing_stand:0x7a6c58,composter:0x7a5a33,beehive:0xb7934f,bee_nest:0xc8a148,campfire:0x5c4a32,soul_campfire:0x4a5a5a,bell:0xf6d03d,beacon:0x7ee4dc,conduit:0x9f8b6d,scaffolding:0xb18e4e,ladder:0x7c6036,
+  farmland:0x51341b,dirt_path:0x947a41,grass_block:0x6fa040,podzol:0x5b3f18,mycelium:0x6f6265,
+  copper_block:0xc06b4f,exposed_copper:0xa17e68,weathered_copper:0x6c9a6e,oxidized_copper:0x52a385,cobweb:0xe4e9ea,fire:0xe58a1f,soul_fire:0x52c7cb,
+  light_weighted:0xf6d03d,heavy_weighted:0xdcdcdc,petrified_oak:0xa2834f,sculk:0x0c1e24,sculk_sensor:0x0e4c58,sculk_catalyst:0x2d3638,sculk_shrieker:0xc6cdac,sculk_vein:0x0d3540,
+  dragon_egg:0x0c0a13,end_rod:0xe0d9cf,lightning_rod:0xc06b4f,decorated_pot:0x8d4b38,crafter:0x6e6a66,trial_spawner:0x3b4a57,vault:0x3d4650,heavy_core:0x5a5a5f,spawner:0x24323f,
+  lodestone:0x77787d,respawn_anchor:0x2f1d4a,frogspawn:0x6b5f5b,sea_pickle:0x6b711f,turtle_egg:0xe4e3c0,skeleton_skull:0xcbcbcb,player_head:0x6a4a33,zombie_head:0x4a7a3a,creeper_head:0x5aa04a,
+  wither_skeleton_skull:0x2c2c2c,piglin_head:0xd4a07f,dragon_head:0x1d1d1d,cake:0xf0ece4,candle:0xe6d3a3,cherry_leaves:0xe6add8,mangrove_roots:0x4a3b27,muddy_mangrove_roots:0x463a2c,
+  creaking_heart:0x5a5048,resin_block:0xd8701a,resin_bricks:0xc6611a,resin_clump:0xd8701a,chiseled_resin_bricks:0xc6611a
+};
+const SPECIAL = {
+  grass_block:{top:0x6fa040,side:0x7d6a45,bottom:0x866043},
+  podzol:{top:0x5b3f18,side:0x7a5634,bottom:0x866043},
+  mycelium:{top:0x6f6265,side:0x7a6560,bottom:0x866043},
+  dirt_path:{top:0x947a41,side:0x866043,bottom:0x866043},
+  farmland:{top:0x51341b,side:0x866043,bottom:0x866043},
+  bookshelf:{top:0xa2834f,side:0x75603d,bottom:0xa2834f},
+  crafting_table:{top:0x9e7a4c,side:0x77583a,bottom:0xa2834f},
+  pumpkin:{top:0xbf7a1d,side:0xc67519,bottom:0xbf7a1d},
+  hay_block:{top:0xa5891b,side:0xa68b0c,bottom:0xa5891b},
+  tnt:{top:0xa6a6a6,side:0xdb4426,bottom:0xa6a6a6},
+  sandstone:{top:0xdfd4a8,side:0xd8cb9b,bottom:0xd4c896},
+  quartz_pillar:{top:0xe8e2da,side:0xebe6e0,bottom:0xe8e2da},
+  barrel:{top:0x7c5c32,side:0x8c6a3c,bottom:0x7c5c32},
+  melon:{top:0x9a9a2c,side:0x6f912c,bottom:0x9a9a2c}
+};
+function six(c){ return [c, c, c, c, c, c]; }           // order: -x +x -y +y -z +z
+function tsb(t, s, b){ return [s, s, b, t, s, s]; }
+function hashColor(n){
+  let h = 2166136261; for (let i = 0; i < n.length; i++){ h ^= n.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const hue = ((h >>> 0) % 360) / 360, s = .28, l = .52;
+  const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  const f = t => { t = (t % 1 + 1) % 1; return t < 1/6 ? p + (q - p) * 6 * t : t < .5 ? q : t < 2/3 ? p + (q - p) * (2/3 - t) * 6 : p; };
+  return [f(hue + 1/3), f(hue), f(hue - 1/3)];
+}
+function colorFor(n, P){
+  for (const d of DYES) if (n.startsWith(d + '_')){
+    const r = n.slice(d.length + 1);
+    if (!DYED.test(r)) break;
+    let c;
+    if (r === 'concrete_powder') c = mixh(CONC[d], 0xffffff, .16);
+    else if (r === 'concrete') c = hexc(CONC[d]);
+    else if (r === 'glazed_terracotta') c = mixh(CONC[d], 0xffffff, .22);
+    else if (r === 'terracotta') c = hexc(TERR[d]);
+    else c = hexc(WOOL[d]);
+    return six(c);
+  }
+  if (SPECIAL[n]){ const s = SPECIAL[n]; return tsb(hexc(s.top), hexc(s.side), hexc(s.bottom)); }
+  if (n.startsWith('potted_')) return six(hexc(T.flower_pot));
+  if (n === 'bamboo_block' || n === 'stripped_bamboo_block'){ const c = hexc(n[0] === 's' ? 0xc4af52 : 0x7f9a2f); return six(c); }
+  const lm = n.match(/^(stripped_)?(.+?)_(log|wood|stem|hyphae)$/);
+  if (lm && PLANK[lm[2]]){
+    const w = lm[2], stripped = !!lm[1], all = lm[3] === 'wood' || lm[3] === 'hyphae';
+    const side = hexc(stripped ? PLANK[w] : BARK[w]);
+    const ring = all ? side : hexc(PLANK[w]);
+    const ax = { x: 0, y: 1, z: 2 }[P.axis || 'y'];
+    const fc = six(side); fc[ax * 2] = ring; fc[ax * 2 + 1] = ring;
+    return fc;
+  }
+  if (T[n] != null) return six(hexc(T[n]));
+  const base = n.replace(/_(stairs|slab|wall|fence_gate|fence|pressure_plate|button|door|trapdoor|wall_hanging_sign|hanging_sign|wall_sign|sign|carpet|pane)$/, '');
+  for (const c of [base, base + 's', base + '_block', base.replace(/_brick$/, '_bricks'), base.replace(/_tile$/, '_tiles')]) if (T[c] != null) return six(hexc(T[c]));
+  if (/leaves/.test(n)){ const w = Object.keys(LEAF).sort((a, b) => b.length - a.length).find(w => n.startsWith(w + '_')); return six(hexc(LEAF[w] || 0x4f8a2a)); }
+  if (/sapling|propagule/.test(n)) return six(hexc(0x4f8a2a));
+  const w = WOODS.find(w => base === w || base.startsWith(w + '_'));
+  if (w) return six(hexc(PLANK[w]));
+  const kw = [['oxidized',0x52a385],['weathered',0x6c9a6e],['exposed',0xa17e68],['copper',0xc06b4f],['deepslate',0x4d4d50],['blackstone',0x302a31],['red_sandstone',0xba631d],
+    ['sandstone',0xd8cb9b],['dark_prismarine',0x335b4b],['prismarine',0x63a197],['quartz',0xece6df],['purpur',0xa97ea9],['red_nether',0x450709],['nether_brick',0x2c1519],
+    ['mud_brick',0x89684f],['end_stone',0xdbde9e],['tuff',0x6c6d66],['resin',0xc6611a],['brick',0x976253],['coral',0xd0567a],['granite',0x9a6a59],['diorite',0xbfbfbf],['andesite',0x868686],
+    ['_ore',0x7d7d7d],['stone',0x7d7d7d],['glass',0xc8e4ea],['grass',0x5f9a3a],['fern',0x588f37],['vine',0x4d7e25],['roots',0x7a3a34],['amethyst',0xa07ad6],['candle',0xe6d3a3]];
+  for (const [k, c] of kw) if (n.includes(k)) return six(hexc(c));
+  return six(hashColor(n));
+}
+
+/* ---------------- Block look: shapes (boxes in 1/16) ---------------- */
+const B = (a, b, c, d, e, f) => [a, b, c, d, e, f];
+function rot(t, dir){
+  const [x0, y0, z0, x1, y1, z1] = t;
+  switch (dir){
+    case 'south': return [16 - x1, y0, 16 - z1, 16 - x0, y1, 16 - z0];
+    case 'east': return [16 - z1, y0, x0, 16 - z0, y1, x1];
+    case 'west': return [z0, y0, 16 - x1, z1, y1, 16 - x0];
+    default: return t.slice();
+  }
+}
+const H4 = ['north', 'south', 'east', 'west'];
+const PLANT = /^(short_grass|grass|fern|dead_bush|.*_sapling|dandelion|poppy|blue_orchid|allium|azure_bluet|.*_tulip|oxeye_daisy|cornflower|lily_of_the_valley|wither_rose|torchflower|.*_mushroom|crimson_fungus|warped_fungus|.*_roots|nether_sprouts|seagrass|sweet_berry_bush|wheat|carrots|potatoes|beetroots|cobweb|fire|soul_fire|.*_coral|.*_coral_fan|bamboo_sapling|cave_vines.*|weeping_vines.*|twisting_vines.*|small_dripleaf|spore_blossom|pitcher_crop|torchflower_crop|mangrove_propagule|.*_cluster|.*amethyst_bud|nether_wart|melon_stem|pumpkin_stem|attached_.*_stem|firefly_bush|bush|short_dry_grass|tall_dry_grass|cactus_flower|open_eyeblossom|closed_eyeblossom|pale_hanging_moss|hanging_roots|glow_berries|big_dripleaf_stem|sculk_vein)$/;
+const TALL = /^(tall_grass|large_fern|sunflower|lilac|rose_bush|peony|sugar_cane|kelp|kelp_plant|tall_seagrass|pitcher_plant|big_dripleaf)$/;
+function shapeFor(n, P){
+  const f = P.facing || 'north';
+  if (/^(water|lava|bubble_column)$/.test(n)) return null;
+  if (n.endsWith('_slab')) return P.type === 'double' ? null : P.type === 'top' ? [B(0,8,0,16,16,16)] : [B(0,0,0,16,8,16)];
+  if (n.endsWith('_stairs')){
+    const top = P.half === 'top';
+    const y0 = top ? 0 : 8, y1 = top ? 8 : 16;
+    return [top ? B(0,8,0,16,16,16) : B(0,0,0,16,8,16), rot(B(0,y0,0,16,y1,8), f)];
+  }
+  if (n.endsWith('_carpet') || /^(pink_petals|leaf_litter|wildflowers|frogspawn)$/.test(n)) return [B(0,0,0,16,1,16)];
+  if (n.endsWith('_pressure_plate')) return [B(1,0,1,15,1,15)];
+  if (n.endsWith('rail')) return [B(0,0,0,16,2,16)];
+  if (n === 'redstone_wire') return [B(1,0,1,15,.5,15)];
+  if (n === 'repeater' || n === 'comparator') return [B(0,0,0,16,2,16)];
+  if (n === 'daylight_detector') return [B(0,0,0,16,6,16)];
+  if (n === 'snow'){ const l = +P.layers || 1; return l >= 8 ? null : [B(0,0,0,16,l*2,16)]; }
+  if (n === 'lily_pad') return [B(1,0,1,15,.5,15)];
+  if (n.endsWith('_trapdoor')){
+    if (P.open === 'true') return [rot(B(0,0,13,16,16,16), f)];
+    return P.half === 'top' ? [B(0,13,0,16,16,16)] : [B(0,0,0,16,3,16)];
+  }
+  if (n.endsWith('_door')) return [rot(B(0,0,13,16,16,16), f)];
+  if (n.endsWith('_fence_gate')) return [rot(B(0,5,7,16,15,9), f)];
+  if (n.endsWith('_fence')){
+    const out = [B(6,0,6,10,16,10)];
+    for (const d of H4) if (P[d] === 'true'){ out.push(rot(B(7,12,0,9,15,6), d), rot(B(7,6,0,9,9,6), d)); }
+    return out;
+  }
+  if (n.endsWith('_wall') && !/(sign|banner|torch|head|skull|fan)/.test(n)){
+    const out = [];
+    if (P.up !== 'false') out.push(B(4,0,4,12,16,12));
+    for (const d of H4) if (P[d] && P[d] !== 'none' && P[d] !== 'false') out.push(rot(B(5,0,0,11,P[d] === 'tall' ? 16 : 14,8), d));
+    if (!out.length) out.push(B(4,0,4,12,16,12));
+    return out;
+  }
+  if (n.endsWith('_pane') || n === 'glass_pane' || n === 'iron_bars'){
+    const out = [B(7,0,7,9,16,9)];
+    for (const d of H4) if (P[d] === 'true') out.push(rot(B(7,0,0,9,16,7), d));
+    return out;
+  }
+  if (/_wall_torch$|^wall_torch$/.test(n)) return [rot(B(7,3,11,9,13,13), f)];
+  if (/torch$/.test(n)) return [B(7,0,7,9,10,9)];
+  if (/lantern$/.test(n) && !/jack_o|sea_/.test(n)) return P.hanging === 'true' ? [B(5,1,5,11,10,11)] : [B(5,0,5,11,9,11)];
+  if (/candle_cake$/.test(n) || n === 'cake') return [B(1,0,1,15,8,15)];
+  if (/candle$/.test(n)) return [B(6,0,6,10,7,10)];
+  if (/_wall_hanging_sign$/.test(n)) return [rot(B(1,0,7,15,10,9), f)];
+  if (/_hanging_sign$/.test(n)) return [B(1,0,7,15,10,9)];
+  if (/_wall_sign$/.test(n)) return [rot(B(0,4,14,16,12,16), f)];
+  if (/_sign$/.test(n)) return [B(7,0,7,9,9,9), B(0,9,7,16,16,9)];
+  if (/_wall_banner$/.test(n)) return [rot(B(1,0,14,15,16,16), f)];
+  if (/_banner$/.test(n)) return [B(7,0,7,9,16,9), B(1,2,7,15,16,8)];
+  if (/_bed$/.test(n)) return [B(0,0,0,16,9,16)];
+  if (/_button$/.test(n) || n === 'lever') return [B(5,0,6,11,3,10)];
+  if (/^(chest|trapped_chest|ender_chest)$/.test(n)) return [B(1,0,1,15,14,15)];
+  if (n === 'ladder') return [rot(B(0,0,15,16,16,16), f)];
+  if (n === 'vine' || n === 'glow_lichen'){
+    const out = [];
+    for (const d of H4) if (P[d] === 'true') out.push(rot(B(0,0,0,16,16,1), d));
+    if (P.up === 'true') out.push(B(0,15,0,16,16,16));
+    if (P.down === 'true') out.push(B(0,0,0,16,1,16));
+    return out.length ? out : [B(0,0,15,16,16,16)];
+  }
+  if (/_wall_(head|skull)$/.test(n)) return [rot(B(4,4,8,12,12,16), f)];
+  if (/_(head|skull)$/.test(n)) return [B(4,0,4,12,8,12)];
+  if (n === 'flower_pot' || n.startsWith('potted_')) return [B(5,0,5,11,6,11)];
+  if (/^(chain|iron_chain|end_rod|lightning_rod|bamboo|pointed_dripstone)$/.test(n)){
+    const ax = P.axis || ({ east: 'x', west: 'x', north: 'z', south: 'z' })[P.facing] || 'y';
+    const w = n === 'bamboo' ? [6.5, 9.5] : [7, 9];
+    return ax === 'x' ? [B(0,w[0],w[0],16,w[1],w[1])] : ax === 'z' ? [B(w[0],w[0],0,w[1],w[1],16)] : [B(w[0],0,w[0],w[1],16,w[1])];
+  }
+  if (TALL.test(n)) return [B(1,0,7.5,15,16,8.5), B(7.5,0,1,8.5,16,15)];
+  if (PLANT.test(n) || /wall_fan$/.test(n)) return [B(2,0,7.5,14,13,8.5), B(7.5,0,2,8.5,13,14)];
+  switch (n){
+    case 'enchanting_table': return [B(0,0,0,16,12,16)];
+    case 'campfire': case 'soul_campfire': return [B(0,0,0,16,7,16)];
+    case 'stonecutter': return [B(0,0,0,16,9,16)];
+    case 'lectern': return [B(0,0,0,16,2,16), B(4,2,4,12,13,12), B(0,13,0,16,16,16)];
+    case 'hopper': return [B(0,10,0,16,16,16), B(4,4,4,12,10,12), B(6,0,6,10,4,10)];
+    case 'anvil': case 'chipped_anvil': case 'damaged_anvil': return [B(2,0,2,14,4,14), B(4,4,3,12,10,13), B(0,10,3,16,16,13)];
+    case 'brewing_stand': return [B(7,0,7,9,14,9), B(1,0,1,15,2,15)];
+    case 'cactus': return [B(1,0,1,15,16,15)];
+    case 'farmland': case 'dirt_path': return [B(0,0,0,16,15,16)];
+    case 'sea_pickle': return [B(6,0,6,10,6,10)];
+    case 'turtle_egg': return [B(4,0,4,12,7,12)];
+    case 'conduit': return [B(5,5,5,11,11,11)];
+    case 'bell': return [B(4,4,4,12,13,12)];
+    case 'grindstone': return [B(4,4,2,12,16,14)];
+    case 'dragon_egg': return [B(1,0,1,15,16,15)];
+    case 'sculk_sensor': case 'calibrated_sculk_sensor': return [B(0,0,0,16,8,16)];
+    case 'sculk_shrieker': return [B(0,0,0,16,8,16)];
+    case 'decorated_pot': return [B(1,0,1,15,16,15)];
+    case 'end_portal_frame': return [B(0,0,0,16,13,16)];
+    case 'heavy_core': return [B(4,0,4,12,8,12)];
+    case 'composter': case 'cauldron': case 'water_cauldron': case 'lava_cauldron': case 'powder_snow_cauldron': return null;
+  }
+  return null;
+}
+const AIR = /^minecraft:(air|cave_air|void_air|structure_void|light|barrier|moving_piston|piston_head)$/;
+const TRANS = /(^|_)glass($|_pane)|^ice$|^frosted_ice$|^water$|^bubble_column$|^slime_block$|^honey_block$|^iron_bars$/;
+function describe(p){
+  const n = p.name.replace(/^minecraft:/, '');
+  const air = AIR.test(p.name);
+  const e = { name: p.name, short: n, props: p.props, air };
+  if (air) return e;
+  e.boxes = shapeFor(n, p.props);
+  if (e.boxes) e.boxes = e.boxes.map(b => b.map(v => v / 16));
+  e.trans = TRANS.test(n);
+  e.fc = colorFor(n, p.props);
+  return e;
+}
+
+/* ---------------- Three.js scene ---------------- */
+const view = $('#view'), canvas = $('#c');
+let renderer, scene, camera, controls, group, gridObj, boxObj, hiObj, dirty = true;
+let S = null, E = [], FULL = null, SKIP = null, bands = [], gen = 0;
+let mode = 'all', layer = 0, lo = 0, hi = 0, xlo = 0, xhi = 0, zlo = 0, zhi = 0;
+const cut = { x0: 0, x1: 0, z0: 0, z1: 0 };
+const hidden = new Set();
+const BAND = 8;
+const SHADE = [0.66, 0.66, 0.5, 1.0, 0.82, 0.82];
+const AO = [0.52, 0.68, 0.84, 1];
+const AX = [[1,0,0],[0,1,0],[0,0,1]];
+const UNIT = [[0,0,0,1,1,1]];
+let matO, matT;
+
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function initThree(){
+  if (!window.THREE || !THREE.OrbitControls) throw new Error('The 3D library could not load. Check your connection and reload the page.');
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, 1, 0.1, 20000);
+  controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true; controls.dampingFactor = 0.12; controls.screenSpacePanning = true;
+  controls.addEventListener('change', () => dirty = true);
+  group = new THREE.Group(); scene.add(group);
+  matO = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  matT = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.55, depthWrite: false });
+  hiObj = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.04, 1.04, 1.04)), new THREE.LineBasicMaterial({ color: 0x000000 }));
+  hiObj.visible = false; hiObj.renderOrder = 5; group.add(hiObj);
+  applyTheme();
+  new ResizeObserver(resize).observe(view);
+  resize();
+  controls.minDistance = 0.5;
+  camera.rotation.order = 'YXZ';
+  let last = performance.now();
+  const loop = () => {
+    requestAnimationFrame(loop);
+    const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
+    let moved;
+    if (fly) moved = flyStep(dt);
+    else { moved = focusStep(now); moved = controls.update() || moved; }
+    if (moved || dirty){
+      dirty = false; renderer.render(scene, camera);
+      const az = fly ? yaw : controls.getAzimuthalAngle();
+      $('#rose').style.transform = `rotate(${az}rad)`;
+    }
+  };
+  loop();
+}
+
+/* ---------------- Fly mode ---------------- */
+let fly = false, yaw = 0, pitch = 0, flySpeed = 8;
+const keys = new Set();
+const FLY_KEYS = new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight']);
+function setFly(on){
+  if (!S || on === fly) return;
+  fly = on; keys.clear();
+  controls.enabled = !on; focusAnim = null;
+  $('#tFly').setAttribute('aria-pressed', on);
+  $('#flyPad').hidden = !on; $('#hintFly').hidden = !on; $('#hintOrbit').hidden = on;
+  view.classList.toggle('flying', on);
+  document.querySelectorAll('#flyPad .btn').forEach(b => b.classList.remove('on'));
+  const d = new THREE.Vector3(); camera.getWorldDirection(d);
+  if (on){
+    yaw = Math.atan2(-d.x, -d.z); pitch = Math.asin(Math.max(-1, Math.min(1, d.y)));
+    camera.rotation.set(pitch, yaw, 0);
+  } else {
+    const dist = Math.max(3, Math.min(12, camera.position.distanceTo(controls.target)));
+    controls.target.copy(camera.position).addScaledVector(d, dist);
+    controls.update();
+  }
+  dirty = true;
+}
+function flyStep(dt){
+  if (!keys.size) return false;
+  const k = c => keys.has(c) ? 1 : 0;
+  const f = k('KeyW') + k('ArrowUp') - k('KeyS') - k('ArrowDown');
+  const r = k('KeyD') + k('ArrowRight') - k('KeyA') - k('ArrowLeft');
+  const u = k('Space') - k('ShiftLeft') - k('ShiftRight');
+  if (!f && !r && !u) return false;
+  const s = flySpeed * dt, sy = Math.sin(yaw), cy = Math.cos(yaw);
+  camera.position.x += (-sy * f + cy * r) * s;
+  camera.position.z += (-cy * f - sy * r) * s;
+  camera.position.y += u * s;
+  return true;
+}
+function setFlySpeed(v){ flySpeed = Math.max(1, Math.min(96, v)); $('#flySpeed').textContent = Math.round(flySpeed); }
+let look = null;
+canvas.addEventListener('pointerdown', e => {
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  if (!fly) return;
+  look = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e => {
+  if (!fly || !look || e.pointerId !== look.id) return;
+  const sens = e.pointerType === 'touch' ? 0.006 : 0.004;
+  yaw -= (e.clientX - look.x) * sens;
+  pitch = Math.max(-1.55, Math.min(1.55, pitch - (e.clientY - look.y) * sens));
+  look.x = e.clientX; look.y = e.clientY;
+  camera.rotation.set(pitch, yaw, 0); dirty = true;
+});
+const endLook = e => { if (look && e.pointerId === look.id) look = null; };
+canvas.addEventListener('pointerup', endLook); canvas.addEventListener('pointercancel', endLook);
+canvas.addEventListener('wheel', e => { if (!fly) return; e.preventDefault(); setFlySpeed(flySpeed * (e.deltaY < 0 ? 1.2 : 1 / 1.2)); }, { passive: false });
+document.querySelectorAll('#flyPad .btn').forEach(b => {
+  const k = b.dataset.k;
+  b.addEventListener('pointerdown', e => { e.preventDefault(); b.setPointerCapture(e.pointerId); keys.add(k); b.classList.add('on'); });
+  const up = () => { keys.delete(k); b.classList.remove('on'); };
+  b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+});
+window.addEventListener('blur', () => keys.clear());
+$('#tFly').addEventListener('click', () => setFly(!fly));
+
+/* ---------------- Double-click focus ---------------- */
+let focusAnim = null;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function focusStep(now){
+  if (!focusAnim) return false;
+  const a = focusAnim, t = Math.min(1, (now - a.t0) / 350), e = 1 - Math.pow(1 - t, 3);
+  controls.target.lerpVectors(a.ft, a.tt, e);
+  camera.position.lerpVectors(a.fp, a.tp, e);
+  if (t >= 1) focusAnim = null;
+  return true;
+}
+canvas.addEventListener('dblclick', e => {
+  if (!S) return;
+  const h = pick(e.clientX, e.clientY);
+  if (!h) return;
+  const tt = new THREE.Vector3(h.x + .5, h.y + .5, h.z + .5).add(group.position);
+  if (fly){ // in fly mode, jump close to the block
+    const d = new THREE.Vector3(); camera.getWorldDirection(d);
+    camera.position.copy(tt).addScaledVector(d, -3); dirty = true; return;
+  }
+  const off = camera.position.clone().sub(controls.target);
+  off.setLength(Math.min(off.length(), 9));
+  const tp = tt.clone().add(off);
+  if (reduceMotion){ controls.target.copy(tt); camera.position.copy(tp); dirty = true; return; }
+  focusAnim = { t0: performance.now(), ft: controls.target.clone(), tt, fp: camera.position.clone(), tp };
+});
+function resize(){
+  const w = view.clientWidth, h = view.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); dirty = true;
+}
+function applyTheme(){
+  if (!scene) return;
+  scene.background = new THREE.Color(css('--scene') || '#1b1f1b');
+  hiObj.material.color.set(css('--hl') || '#ffffff');
+  if (S) makeHelpers();
+  dirty = true;
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+function makeHelpers(){
+  for (const o of [gridObj, boxObj]) if (o){ group.remove(o); o.geometry.dispose(); }
+  const size = Math.ceil((Math.max(S.W, S.L) + 16) / 2) * 2;
+  gridObj = new THREE.GridHelper(size, size, new THREE.Color(css('--grid')), new THREE.Color(css('--grid2')));
+  gridObj.position.set(Math.round(S.W / 2), -0.01, Math.round(S.L / 2));
+  gridObj.visible = $('#tGrid').getAttribute('aria-pressed') === 'true';
+  group.add(gridObj);
+  boxObj = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: new THREE.Color(css('--accent')), transparent: true, opacity: 0.7 }));
+  const sx = xhi - xlo + 1, sy = hi - lo + 1, sz = zhi - zlo + 1;
+  boxObj.scale.set(sx, sy, sz);
+  boxObj.position.set(xlo + sx / 2, lo + sy / 2, zlo + sz / 2);
+  boxObj.visible = $('#tBox').getAttribute('aria-pressed') === 'true';
+  group.add(boxObj);
+}
+function frame(){
+  const m = Math.max(S.W, S.H, S.L);
+  controls.target.set(0, S.H / 2, 0);
+  camera.position.set(m * 1.05 + 6, S.H / 2 + m * 0.8 + 4, m * 1.35 + 8);
+  camera.near = 0.1; camera.far = m * 40 + 500; camera.updateProjectionMatrix();
+  controls.update(); dirty = true;
+}
+
+/* ---------------- Meshing ---------------- */
+function idx(x, y, z){ return (y * S.L + z) * S.W + x; }
+function nb(x, y, z){
+  if (x < xlo || z < zlo || x > xhi || z > zhi || y < lo || y > hi) return 0;
+  const id = S.blocks[idx(x, y, z)];
+  return SKIP[id] ? 0 : id;
+}
+function solid(x, y, z){
+  if (x < xlo || z < zlo || x > xhi || z > zhi || y < lo || y > hi) return 0;
+  return FULL[S.blocks[idx(x, y, z)]];
+}
+function jit(x, y, z){ let h = (x * 73856093) ^ (y * 19349663) ^ (z * 83492791); h = Math.imul(h ^ (h >>> 13), 1274126177); return 0.95 + ((h >>> 0) % 1000) / 1000 * 0.09; }
+function emit(t, x, y, z, id, e){
+  const full = !e.boxes, list = e.boxes || UNIT, j = jit(x, y, z);
+  const P = t.pos, C = t.col, Ix = t.idx;
+  const p = [0, 0, 0], a = [3, 3, 3, 3];
+  for (const bx of list){
+    for (let d = 0; d < 3; d++) for (let si = 0; si < 2; si++){
+      const s = si ? 1 : -1;
+      const nx = x + (d === 0 ? s : 0), ny = y + (d === 1 ? s : 0), nz = z + (d === 2 ? s : 0);
+      const edge = si ? bx[3 + d] === 1 : bx[d] === 0;
+      if (edge){
+        const n = nb(nx, ny, nz);
+        if (n){ if (FULL[n]) continue; if (e.trans && full && n === id) continue; }
+      }
+      const u = (d + 1) % 3, v = (d + 2) % 3;
+      const c = e.fc[d * 2 + si], sh = SHADE[d * 2 + si] * j;
+      const base = P.length / 3;
+      for (let k = 0; k < 4; k++){
+        const cu = k === 1 || k === 2, cv = k >= 2;
+        p[d] = si ? bx[3 + d] : bx[d]; p[u] = cu ? bx[3 + u] : bx[u]; p[v] = cv ? bx[3 + v] : bx[v];
+        let ao = 3;
+        if (full && !e.trans){
+          const su = cu ? 1 : -1, sv = cv ? 1 : -1, U = AX[u], V = AX[v];
+          const s1 = solid(nx + su*U[0], ny + su*U[1], nz + su*U[2]);
+          const s2 = solid(nx + sv*V[0], ny + sv*V[1], nz + sv*V[2]);
+          const s3 = solid(nx + su*U[0] + sv*V[0], ny + su*U[1] + sv*V[1], nz + su*U[2] + sv*V[2]);
+          ao = s1 && s2 ? 0 : 3 - (s1 + s2 + s3);
+        }
+        a[k] = ao;
+        const fct = AO[ao] * sh;
+        P.push(x + p[0], y + p[1], z + p[2]);
+        C.push(Math.min(1, c[0] * fct), Math.min(1, c[1] * fct), Math.min(1, c[2] * fct));
+      }
+      if (a[0] + a[2] < a[1] + a[3]) Ix.push(base+1, base+2, base+3, base+1, base+3, base);
+      else Ix.push(base, base+1, base+2, base, base+2, base+3);
+    }
+  }
+}
+function buildBand(b, r){
+  lo = r.lo; hi = r.hi; xlo = r.x0; xhi = r.x1; zlo = r.z0; zhi = r.z1;
+  const y0 = b * BAND, y1 = Math.min(S.H - 1, y0 + BAND - 1);
+  const O = { pos: [], col: [], idx: [] }, Tt = { pos: [], col: [], idx: [] };
+  for (let y = Math.max(y0, lo); y <= Math.min(y1, hi); y++)
+    for (let z = zlo; z <= zhi; z++) for (let x = xlo; x <= xhi; x++){
+      const id = S.blocks[idx(x, y, z)];
+      if (!id || SKIP[id]) continue;
+      const e = E[id];
+      emit(e.trans ? Tt : O, x, y, z, id, e);
+    }
+  return { o: toMesh(O, matO), t: toMesh(Tt, matT) };
+}
+function toMesh(t, mat){
+  if (!t.pos.length) return null;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(t.pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(t.col, 3));
+  g.setIndex(t.idx);
+  g.computeBoundingSphere();
+  const m = new THREE.Mesh(g, mat);
+  if (mat === matT) m.renderOrder = 2;
+  group.add(m);
+  return m;
+}
+function disposeSet(s){ if (!s) return; for (const m of [s.o, s.t]) if (m){ group.remove(m); m.geometry.dispose(); } }
+function showSet(s, on){ if (!s) return; if (s.o) s.o.visible = on; if (s.t) s.t.visible = on; }
+function visRange(){
+  const [a, c] = mode === 'all' ? [0, S.H - 1] : mode === 'upto' ? [0, layer] : [layer, layer];
+  return { lo: a, hi: c, x0: cut.x0, x1: cut.x1, z0: cut.z0, z1: cut.z1 };
+}
+const fullRange = () => ({ lo: 0, hi: S.H - 1, x0: 0, x1: S.W - 1, z0: 0, z1: S.L - 1 });
+function fullValid(b, r){
+  if (r.x0 !== 0 || r.z0 !== 0 || r.x1 !== S.W - 1 || r.z1 !== S.L - 1) return false;
+  const y0 = b * BAND, y1 = Math.min(S.H - 1, y0 + BAND - 1);
+  return (y0 === 0 ? r.lo === 0 : r.lo <= y0 - 1) && (y1 === S.H - 1 ? r.hi === S.H - 1 : r.hi >= y1 + 1);
+}
+function apply(){
+  if (!S) return;
+  const r = visRange();
+  const key = [r.lo, r.hi, r.x0, r.x1, r.z0, r.z1].join(':');
+  for (let b = 0; b < bands.length; b++){
+    const Bd = bands[b]; if (!Bd) continue;
+    const y0 = b * BAND, y1 = Math.min(S.H - 1, y0 + BAND - 1);
+    if (y1 < r.lo || y0 > r.hi){ showSet(Bd.full, false); showSet(Bd.temp, false); continue; }
+    if (fullValid(b, r)){ showSet(Bd.temp, false); showSet(Bd.full, true); }
+    else {
+      if (Bd.tempKey !== key){ disposeSet(Bd.temp); Bd.temp = buildBand(b, r); Bd.tempKey = key; }
+      showSet(Bd.full, false); showSet(Bd.temp, true);
+    }
+  }
+  lo = r.lo; hi = r.hi; xlo = r.x0; xhi = r.x1; zlo = r.z0; zhi = r.z1;
+  if (boxObj){
+    const sx = xhi - xlo + 1, sy = hi - lo + 1, sz = zhi - zlo + 1;
+    boxObj.scale.set(sx, sy, sz);
+    boxObj.position.set(xlo + sx / 2, lo + sy / 2, zlo + sz / 2);
+  }
+  hiObj.visible = false;
+  dirty = true;
+}
+function refreshFlags(){
+  FULL = new Uint8Array(E.length); SKIP = new Uint8Array(E.length);
+  E.forEach((e, i) => {
+    SKIP[i] = e.air || hidden.has(e.name) ? 1 : 0;
+    FULL[i] = !SKIP[i] && !e.boxes && !e.trans ? 1 : 0;
+  });
+}
+async function rebuildAll(){
+  const my = ++gen;
+  for (const Bd of bands){ if (Bd){ disposeSet(Bd.full); disposeSet(Bd.temp); } }
+  const nB = Math.ceil(S.H / BAND);
+  bands = Array.from({ length: nB }, () => ({ full: null, temp: null, tempKey: '' }));
+  refreshFlags();
+  const pr = $('#progress');
+  const big = S.W * S.H * S.L > 400000;
+  let t0 = performance.now();
+  for (let b = 0; b < nB; b++){
+    if (my !== gen) return;
+    const Bd = bands[b];
+    Bd.full = buildBand(b, fullRange());
+    showSet(Bd.full, false);
+    if (performance.now() - t0 > 30){
+      apply();
+      if (big){ pr.hidden = false; pr.textContent = `Building mesh ${Math.round((b + 1) / nB * 100)}%`; }
+      await new Promise(r => setTimeout(r, 0));
+      t0 = performance.now();
+    }
+  }
+  if (my !== gen) return;
+  pr.hidden = true;
+  apply();
+}
+
+/* ---------------- Picking ---------------- */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function pick(clientX, clientY){
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const o = ray.ray.origin.clone().sub(group.position), d = ray.ray.direction;
+  const O = [o.x, o.y, o.z], D = [d.x, d.y, d.z];
+  const mn = [xlo, lo, zlo], mx = [xhi + 1, hi + 1, zhi + 1];
+  let t0 = 0, t1 = Infinity;
+  for (let i = 0; i < 3; i++){
+    if (Math.abs(D[i]) < 1e-9){ if (O[i] < mn[i] || O[i] > mx[i]) return null; continue; }
+    let a = (mn[i] - O[i]) / D[i], b = (mx[i] - O[i]) / D[i];
+    if (a > b) [a, b] = [b, a];
+    t0 = Math.max(t0, a); t1 = Math.min(t1, b);
+    if (t0 > t1) return null;
+  }
+  const t = t0 + 1e-5;
+  const p = [O[0] + D[0]*t, O[1] + D[1]*t, O[2] + D[2]*t];
+  const c = p.map((v, i) => Math.min(Math.max(Math.floor(v), mn[i]), mx[i] - 1));
+  const st = D.map(v => v > 0 ? 1 : -1);
+  const tM = D.map((v, i) => Math.abs(v) < 1e-9 ? Infinity : ((c[i] + (v > 0 ? 1 : 0)) - p[i]) / v);
+  const tD = D.map(v => Math.abs(v) < 1e-9 ? Infinity : Math.abs(1 / v));
+  for (let n = 0; n < (S.W + S.H + S.L) * 2; n++){
+    const id = S.blocks[idx(c[0], c[1], c[2])];
+    if (id && !SKIP[id]) return { x: c[0], y: c[1], z: c[2], id };
+    const ax = tM[0] < tM[1] ? (tM[0] < tM[2] ? 0 : 2) : (tM[1] < tM[2] ? 1 : 2);
+    c[ax] += st[ax]; tM[ax] += tD[ax];
+    if (c[ax] < mn[ax] || c[ax] >= mx[ax]) return null;
+  }
+  return null;
+}
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+let pendingMove = null;
+canvas.addEventListener('pointermove', ev => {
+  if (ev.buttons) return;
+  if (pendingMove) { pendingMove = [ev.clientX, ev.clientY]; return; }
+  pendingMove = [ev.clientX, ev.clientY];
+  requestAnimationFrame(() => {
+    const [cx, cy] = pendingMove; pendingMove = null;
+    if (!S) return;
+    const h = pick(cx, cy);
+    const out = $('#hover');
+    if (!h){ hiObj.visible = false; out.innerHTML = '<span class="dim">Point at a block to inspect it</span>'; dirty = true; return; }
+    hiObj.position.set(h.x + .5, h.y + .5, h.z + .5); hiObj.visible = true; dirty = true;
+    const e = E[h.id];
+    const pr = Object.entries(e.props).map(([k, v]) => `${k}=${v}`).join(', ');
+    out.innerHTML = `<b>${esc(e.name)}</b>${pr ? ` <span class="dim">[${esc(pr)}]</span>` : ''}<br><span class="dim">x ${h.x} · y ${h.y} · z ${h.z}</span>`;
+  });
+});
+canvas.addEventListener('pointerleave', () => { if (hiObj){ hiObj.visible = false; dirty = true; } });
+
+/* ---------------- UI ---------------- */
+const pretty = n => n.replace(/^minecraft:/, '').split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+const fmt = n => n.toLocaleString('en');
+const DVS = [[4440,'1.21.8'],[4438,'1.21.7'],[4435,'1.21.6'],[4325,'1.21.5'],[4189,'1.21.4'],[4082,'1.21.3'],[3955,'1.21.1'],[3953,'1.21'],[3839,'1.20.6'],[3700,'1.20.4'],[3578,'1.20.2'],[3465,'1.20.1'],[3463,'1.20'],[3337,'1.19.4'],[3218,'1.19.3'],[3120,'1.19.2'],[2975,'1.18.2'],[2865,'1.18.1'],[2730,'1.17.1'],[2586,'1.16.5'],[2230,'1.15.2'],[1976,'1.14.4'],[1631,'1.13.2']];
+function mcVersion(dv){
+  if (!dv) return '—';
+  if (dv > DVS[0][0]) return `${DVS[0][1]}+ (data ${dv})`;
+  for (const [v, n] of DVS) if (dv >= v) return dv === v ? `${n} (data ${dv})` : `${n}+ (data ${dv})`;
+  return `pre-1.13 (data ${dv})`;
+}
+function stacks(n){
+  if (n < 64) return '';
+  const sb = Math.floor(n / 1728), r1 = n % 1728, st = Math.floor(r1 / 64), r = r1 % 64;
+  const parts = [];
+  if (sb) parts.push(`${sb} shulker${sb > 1 ? 's' : ''}`);
+  if (st) parts.push(`${st} stack${st > 1 ? 's' : ''}`);
+  if (r) parts.push(`${r}`);
+  return parts.join(' + ');
+}
+let counts = [];
+function renderInfo(){
+  const m = S.meta;
+  $('#fileName').textContent = m.name || 'Untitled';
+  $('#fileTag').textContent = m.file ? (m.file.split('.').pop() || '').toUpperCase() : 'Example build';
+  $('#desc').textContent = m.description || '';
+  $('#desc').hidden = !m.description;
+  const total = counts.reduce((s, c) => s + c.n, 0);
+  const rows = [
+    ['Size', `${S.W} × ${S.H} × ${S.L}`],
+    ['Blocks', fmt(total)],
+    ['Volume', fmt(S.W * S.H * S.L)],
+    ['Regions', S.regions.length > 1 ? `${S.regions.length}: ${S.regions.map(r => r.name).join(', ')}` : S.regions[0].name],
+    ['Author', m.author || '—'],
+    ['Created', m.created ? new Date(m.created).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'],
+    ['Minecraft', mcVersion(m.dataVersion)],
+    ['Format', m.format || '—']
+  ];
+  $('#facts').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
+}
+function countMaterials(){
+  const byName = new Map();
+  const per = new Uint32Array(E.length);
+  for (let i = 0; i < S.blocks.length; i++) per[S.blocks[i]]++;
+  E.forEach((e, i) => {
+    if (e.air || !per[i]) return;
+    let c = byName.get(e.name);
+    if (!c){ c = { name: e.name, n: 0, color: e.fc[3] }; byName.set(e.name, c); }
+    c.n += per[i];
+  });
+  counts = [...byName.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+}
+function renderMats(){
+  const q = $('#matSearch').value.trim().toLowerCase().replace(/\s+/g, '_');
+  const list = q ? counts.filter(c => c.name.includes(q)) : counts;
+  $('#matTotal').textContent = `${counts.length} types`;
+  $('#matList').innerHTML = list.map(c => {
+    const [r, g, b] = c.color.map(v => Math.round(v * 255));
+    const off = hidden.has(c.name);
+    const sk = stacks(c.n);
+    return `<li><button class="mrow${off ? ' off' : ''}" data-n="${esc(c.name)}" aria-pressed="${off}" title="${off ? 'Show' : 'Hide'} ${esc(pretty(c.name))}">
+      <span class="sw" style="background:rgb(${r},${g},${b})"></span><span class="mname">${esc(pretty(c.name))}</span><span class="mcount">${fmt(c.n)}</span>${sk ? `<span class="mstack">${sk}</span>` : ''}</button></li>`;
+  }).join('') || '<li class="desc">No blocks match that filter.</li>';
+  $('#showAll').hidden = hidden.size === 0;
+}
+$('#matList').addEventListener('click', ev => {
+  const b = ev.target.closest('.mrow'); if (!b) return;
+  const n = b.dataset.n;
+  hidden.has(n) ? hidden.delete(n) : hidden.add(n);
+  renderMats(); rebuildAll();
+});
+$('#showAll').addEventListener('click', () => { hidden.clear(); renderMats(); rebuildAll(); });
+$('#matSearch').addEventListener('input', renderMats);
+
+function renderLayer(){
+  const sl = $('#layer');
+  sl.max = S.H - 1; sl.value = layer;
+  $('#layerTotal').textContent = `${S.H} layers`;
+  const disabled = mode === 'all';
+  sl.disabled = disabled; $('#layDown').disabled = disabled; $('#layUp').disabled = disabled;
+  $('#layerRead').innerHTML = mode === 'all'
+    ? `Showing all ${S.H} layers. Pick <b>Up to</b> or <b>Single</b> to slice.`
+    : mode === 'upto' ? `Layers <b>0–${layer}</b> of ${S.H - 1}` : `Layer <b>${layer}</b> of ${S.H - 1}`;
+}
+let applyQueued = false;
+function queueApply(){ if (applyQueued) return; applyQueued = true; requestAnimationFrame(() => { applyQueued = false; apply(); }); }
+function setLayer(v){ layer = Math.max(0, Math.min(S.H - 1, v)); renderLayer(); queueApply(); }
+function setMode(m){ mode = m; $('#mode-' + m).checked = true; renderLayer(); queueApply(); }
+document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => setMode(r.value)));
+$('#layer').addEventListener('input', e => setLayer(+e.target.value));
+$('#layDown').addEventListener('click', () => setLayer(layer - 1));
+$('#layUp').addEventListener('click', () => setLayer(layer + 1));
+document.addEventListener('keyup', e => keys.delete(e.code));
+document.addEventListener('keydown', e => {
+  const ae = document.activeElement;
+  if (!S || ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT' && /^(text|search)$/.test(ae.type))) return;
+  if (ae && ae.type === 'range' && e.key.startsWith('Arrow')) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.code === 'KeyF'){ e.preventDefault(); setFly(!fly); return; }
+  if (fly && e.key === 'Escape'){ setFly(false); return; }
+  if (fly && FLY_KEYS.has(e.code)){ e.preventDefault(); keys.add(e.code); return; }
+  const up = e.key === ']' || e.key === 'PageUp', down = e.key === '[' || e.key === 'PageDown';
+  if (!up && !down) return;
+  e.preventDefault();
+  if (mode === 'all'){ layer = up ? 0 : S.H - 1; setMode('upto'); if (up) return; }
+  setLayer(layer + (up ? 1 : -1));
+});
+$('#resetView').addEventListener('click', () => { if (!S) return; setFly(false); frame(); });
+
+function renderCut(){
+  const ids = { x0: '#cx0', x1: '#cx1', z0: '#cz0', z1: '#cz1' };
+  for (const [k, sel] of Object.entries(ids)){
+    const el = $(sel); el.min = 0; el.max = k[0] === 'x' ? S.W - 1 : S.L - 1; el.value = cut[k];
+  }
+  $('#cxv').textContent = `${cut.x0}–${cut.x1}`;
+  $('#czv').textContent = `${cut.z0}–${cut.z1}`;
+  $('#cutReset').hidden = cut.x0 === 0 && cut.z0 === 0 && cut.x1 === S.W - 1 && cut.z1 === S.L - 1;
+}
+for (const [k, sel] of [['x0', '#cx0'], ['x1', '#cx1'], ['z0', '#cz0'], ['z1', '#cz1']]){
+  $(sel).addEventListener('input', e => {
+    const v = +e.target.value, a = k[0];
+    cut[k] = v;
+    if (k[1] === '0' && cut[a + '1'] < v) cut[a + '1'] = v;
+    if (k[1] === '1' && cut[a + '0'] > v) cut[a + '0'] = v;
+    renderCut(); queueApply();
+  });
+}
+$('#cutReset').addEventListener('click', () => { Object.assign(cut, { x0: 0, x1: S.W - 1, z0: 0, z1: S.L - 1 }); renderCut(); queueApply(); });
+for (const id of ['tGrid', 'tBox']) $('#' + id).addEventListener('click', e => {
+  const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+  e.currentTarget.setAttribute('aria-pressed', on);
+  const o = id === 'tGrid' ? gridObj : boxObj; if (o) o.visible = on; dirty = true;
+});
+
+function showError(msg){ const el = $('#err'); el.textContent = msg; el.hidden = !msg; }
+function setModel(M){
+  setFly(false);
+  S = M;
+  hidden.clear();
+  Object.assign(cut, { x0: 0, x1: S.W - 1, z0: 0, z1: S.L - 1 });
+  lo = 0; hi = S.H - 1; xlo = 0; xhi = S.W - 1; zlo = 0; zhi = S.L - 1;
+  renderCut();
+  E = S.palette.map(describe);
+  group.position.set(-S.W / 2, 0, -S.L / 2);
+  countMaterials(); renderInfo(); renderMats();
+  mode = 'all'; layer = S.H - 1; $('#mode-all').checked = true; renderLayer();
+  makeHelpers(); frame();
+  rebuildAll();
+}
+async function openFile(f){
+  if (!f) return;
+  showError('');
+  const pr = $('#progress'); pr.hidden = false; pr.textContent = `Reading ${f.name}…`;
+  try {
+    const M = await loadFile(f);
+    setModel(M);
+  } catch (err){
+    pr.hidden = true;
+    showError(`Couldn't open ${f.name}. ${err.message || err}`);
+  }
+}
+$('#fileInput').addEventListener('change', e => { openFile(e.target.files[0]); e.target.value = ''; });
+let dragDepth = 0;
+window.addEventListener('dragenter', e => { if ([...(e.dataTransfer?.types || [])].includes('Files')){ dragDepth++; $('#drop').hidden = false; } });
+window.addEventListener('dragleave', () => { if (--dragDepth <= 0){ dragDepth = 0; $('#drop').hidden = true; } });
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => { e.preventDefault(); dragDepth = 0; $('#drop').hidden = true; const f = e.dataTransfer?.files?.[0]; if (f) openFile(f); });
+
+try {
+  initThree();
+  setModel(makeSample());
+} catch (err){
+  showError(err.message || String(err));
+}
+</script>
+
+</html>
