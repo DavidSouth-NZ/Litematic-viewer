@@ -2,7 +2,7 @@
 
 View Minecraft schematics in 3D, right in your browser.
 
-**Open it:** https://davidsouth-nz.github.io/litematic-viewer/
+**Open it:** https://davidsouth-nz.github.io/Litematic-viewer/
 
 Supports Litematica `.litematic`, Sponge `.schem` and vanilla structure `.nbt` files. Files are read locally in your browser and are never uploaded.
 
